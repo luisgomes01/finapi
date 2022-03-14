@@ -14,19 +14,25 @@ app.post("/account", (req, res) => {
   );
 
   if (customerAlreadyExists) {
-    return response.status(400).json({ error: "Customer already exists!" });
+    return res.status(400).json({ error: "Customer already exists!" });
   }
-
-  const id = uuidv4();
 
   customers.push({
     cpf,
-    id,
+    id: uuidv4(),
     name,
     statement: [],
   });
 
   return res.status(201).send();
+});
+
+app.get("/statement/:cpf", (req, res) => {
+  const { cpf } = req.params;
+
+  const customer = customers.find((customer) => customer.cpf === cpf);
+
+  return res.json(customer.statement);
 });
 
 app.listen(3001);
