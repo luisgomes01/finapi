@@ -1,3 +1,4 @@
+const { response } = require("express");
 const express = require("express");
 const { v4: uuidv4 } = require("uuid");
 
@@ -18,6 +19,18 @@ const verifyIfAccountExistsCPF = (req, res, next) => {
   req.customer = customer;
 
   return next();
+};
+
+const getBalance = (statement) => {
+  const balance = statement.reduce((acc, operation) => {
+    if (operation.type === "Credit") {
+      return acc + operation.amount;
+    } else {
+      return acc - operation.amount;
+    }
+  }, 0);
+
+  return balance;
 };
 
 app.post("/account", (req, res) => {
@@ -46,7 +59,6 @@ app.get("/statement", verifyIfAccountExistsCPF, (req, res) => {
 
   const customer = customers.find((customer) => customer.cpf === cpf);
 
-
   if (!customer) {
     return res.status(400).json({ error: "Customer not found" });
   }
@@ -56,7 +68,7 @@ app.get("/statement", verifyIfAccountExistsCPF, (req, res) => {
 app.post("/deposit", verifyIfAccountExistsCPF, (req, res) => {
   const { description, amount } = req.body;
   const { customer } = req;
-  
+
   const statementOperation = {
     description,
     amount,
@@ -66,6 +78,42 @@ app.post("/deposit", verifyIfAccountExistsCPF, (req, res) => {
 
   customer.statement.push(statementOperation);
   return res.status(201).send();
+});
+
+app.post("/withdraw", verifyIfAccountExistsCPF, (req, res) => {
+  const { amount } = req.body;
+  const { customer } = req;
+
+  const balance = getBalance(customer.statement);
+
+  if (balance < amount) {
+    return res.status(400).json({ error: "Insuficcient funds!" });
+  }
+
+  const statementOperation = {
+    amount,
+    created_at: new Date(),
+    type: "debit",
+  };
+
+  customer.statement.push(statementOperation);
+
+  return res.send(201).send();
+});
+
+app.get("/statement/date", verifyIfAccountExistsCPF, (req, res) => {
+  const { customer } = req;
+  const { date } = req.query;
+
+  const dateFormat = new Date(date + " 00:00");
+
+  const statement = customer.statement.filter(
+    (statement) =>
+      statement.created_at.toDateString() ===
+      new Date(dateFormat).toDateString()
+  );
+
+  return res.json(customer.statement);
 });
 
 app.listen(3001);
