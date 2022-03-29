@@ -23,7 +23,7 @@ const verifyIfAccountExistsCPF = (req, res, next) => {
 
 const getBalance = (statement) => {
   const balance = statement.reduce((acc, operation) => {
-    if (operation.type === "Credit") {
+    if (operation.type === "credit") {
       return acc + operation.amount;
     } else {
       return acc - operation.amount;
@@ -129,6 +129,21 @@ app.get("/account", verifyIfAccountExistsCPF, (req, res) => {
   const { customer } = req;
 
   return res.json(customer);
+});
+
+app.delete("/account", verifyIfAccountExistsCPF, (req, res) => {
+  const { customer } = req;
+
+  customers.splice(customer, 1);
+
+  return res.status(200).json(customers);
+});
+
+app.get("/balance", verifyIfAccountExistsCPF, (req, res) => {
+  const { customer } = req;
+  const balance = getBalance(customer.statement);
+
+  return res.json(balance);
 });
 
 app.listen(3001);
